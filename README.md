@@ -1,8 +1,3 @@
-Here's the updated `README.md` file for your GitHub repository, providing a clear explanation of the project, setup instructions, and code structure:
-
-### `README.md`
-
-```markdown
 # AWS Resource Management Script
 
 This project contains Python scripts to automate the creation and deletion of AWS resources such as EC2 instances, load balancers, target groups, launch templates, and SNS notifications. The scripts utilize the `boto3` library to interact with AWS services, streamlining infrastructure management.
