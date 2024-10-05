@@ -1,0 +1,39 @@
+import boto3
+from botocore.exceptions import ClientError
+
+# Initialize a session using Amazon EC2
+ec2 = boto3.client('ec2', region_name='us-west-2')
+
+def filter_ec2_instances_by_name(inst_names):
+    """Filter EC2 instances based on the 'Name' tag with specified instance names."""
+    try:
+        # Filter instances based on the 'Name' tag with given values
+        response = ec2.describe_instances(
+            Filters=[
+                {
+                    'Name': 'tag:Name',
+                    'Values': inst_names  # expecting a list of instance names
+                }
+            ]
+        )
+        
+        instances = []
+        # Loop through the reservations and instances
+        for reservation in response['Reservations']:
+            for instance in reservation['Instances']:
+                instances.append(instance['InstanceId'])
+
+        return instances
+    
+    except ClientError as e:
+        print(f"Error retrieving instances: {e}")
+        return None
+
+# Example usage
+names = ['webserver1', 'webserver2']  # List of instance names to filter by
+filtered_instances = filter_ec2_instances_by_name(names)
+
+if filtered_instances:
+    print(f"Filtered EC2 instances with Name 'webserver1' and 'webserver2': {filtered_instances}")
+else:
+    print("No EC2 instances found with the specified names.")

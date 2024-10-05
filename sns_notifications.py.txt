@@ -1,0 +1,112 @@
+import boto3
+from botocore.exceptions import ClientError
+
+# Create AWS clients
+ec2_client = boto3.client('ec2', region_name='us-west-2')
+sns_client = boto3.client('sns', region_name='us-west-2')
+cloudwatch_client = boto3.client('cloudwatch', region_name='us-west-2')
+
+# Instance names
+instance_names = ['WebServer1', 'WebServer2']
+
+# Function to get instance ID from instance name
+def get_instance_id(instance_name):
+    try:
+        response = ec2_client.describe_instances(
+            Filters=[
+                {
+                    'Name': 'tag:Name',
+                    'Values': [instance_name]
+                },
+                {
+                    'Name': 'instance-state-name',
+                    'Values': ['running']
+                }
+            ]
+        )
+        for reservation in response['Reservations']:
+            for instance in reservation['Instances']:
+                return instance['InstanceId']
+        print(f"No running instance found with name: {instance_name}")
+        return None
+    except ClientError as e:
+        print(f"Error fetching instance ID for {instance_name}: {e}")
+        return None
+
+# Create SNS topics for each instance
+def create_sns_topics(instance_names):
+    sns_topics = {}
+    for name in instance_names:
+        topic_names = [
+            f'{name}-HealthIssuesAlert',
+            f'{name}-ScalingEventsAlert',
+            f'{name}-HighTrafficAlert'
+        ]
+        for topic_name in topic_names:
+            try:
+                response = sns_client.create_topic(Name=topic_name)
+                sns_topics[topic_name] = response['TopicArn']
+                print(f"Created SNS Topic: {topic_name}, ARN: {response['TopicArn']}")
+            except ClientError as e:
+                print(f"Error creating SNS topic {topic_name}: {e}")
+    return sns_topics
+
+# Subscribe to SNS Topics (Email)
+def create_sns_subscriptions(sns_topics):
+    for topic_name, topic_arn in sns_topics.items():
+        try:
+            sns_client.subscribe(
+                TopicArn=topic_arn,
+                Protocol='email',
+                Endpoint='bharatbhusan051991@gmail.com'  # Replace with your email
+            )
+            print(f"Subscribed to {topic_name} via Email.")
+        except ClientError as e:
+            print(f"Error creating SNS subscription for {topic_name}: {e}")
+
+# Create a CloudWatch alarm for high traffic (CPU utilization > 80%)
+def create_cloudwatch_alarm(instance_id, instance_name, sns_topics):
+    if not instance_id:
+        print(f"Cannot create CloudWatch alarm for {instance_name}: No instance ID found")
+        return
+
+    try:
+        cloudwatch_client.put_metric_alarm(
+            AlarmName=f'HighTrafficAlarm-{instance_name}'[:255],  # Safeguard against long names
+            ComparisonOperator='GreaterThanThreshold',
+            EvaluationPeriods=1,
+            MetricName='CPUUtilization',
+            Namespace='AWS/EC2',
+            Period=300,
+            Statistic='Average',
+            Threshold=80.0,
+            ActionsEnabled=True,
+            AlarmActions=[sns_topics[f'{instance_name}-HighTrafficAlert']],
+            AlarmDescription=f'Alarm for high traffic based on CPU utilization for {instance_name}.',
+            Dimensions=[
+                {
+                    'Name': 'InstanceId',
+                    'Value': instance_id
+                }
+            ]
+        )
+        print(f"CloudWatch alarm created for high traffic on instance {instance_name}.")
+    except ClientError as e:
+        print(f"Error creating CloudWatch alarm for {instance_name}: {e}")
+
+# Main function
+def main():
+    # Step 1: Create SNS Topics for each instance
+    sns_topics = create_sns_topics(instance_names)
+
+    # Step 2: Create SNS Subscriptions
+    create_sns_subscriptions(sns_topics)
+
+    # Step 3: Create CloudWatch Alarm for High Traffic for each instance
+    for instance_name in instance_names:
+        instance_id = get_instance_id(instance_name)
+        create_cloudwatch_alarm(instance_id, instance_name, sns_topics)
+
+# Run the main function
+if __name__ == "__main__":
+    main()

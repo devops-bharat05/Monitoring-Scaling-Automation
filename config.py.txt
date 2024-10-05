@@ -1,0 +1,27 @@
+# config.py
+
+# AWS Configuration
+REGION_NAME = 'us-west-2'
+
+# EC2 Configuration
+KEY_PAIR = 'Bharat-MyApp'
+SECURITY_GROUP_ID = 'sg-09390981a6e7b8f18'
+SUBNET_IDS = ['subnet-06bd72b2e4cb41d10', 'subnet-03ca36de9a927fe8e']
+AMI_ID = 'ami-08d8ac128e0a1b91c'
+INSTANCE_TYPE = 't2.micro'
+
+# Launch Template Configuration
+LAUNCH_TEMPLATE_NAME = 'bharat-launch-template'
+
+# Auto Scaling Group Configuration
+AUTO_SCALING_GROUP_NAME = 'bharat-auto-scaling-group'
+
+# Target Group Configuration
+TARGET_GROUP_NAME = 'bharat-target-group'
+
+# SNS Configuration
+INSTANCE_NAMES = ['WebServer1', 'WebServer2']
+EMAIL_ENDPOINT = 'bharatbhusan051991@gmail.com'  # Replace with your email
+
+# Load Balancer Configuration
+LOAD_BALANCER_NAME = 'bharat-load-balancer'

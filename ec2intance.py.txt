@@ -1,0 +1,106 @@
+import boto3
+from botocore.exceptions import ClientError
+
+# Initialize boto3 EC2 resource
+ec2 = boto3.resource('ec2', region_name='us-west-2')
+
+# Global Variables
+KEY_PAIR = 'Bharat-MyApp'                                # Replace with your key pair name
+SECURITY_GROUP_ID = 'sg-09390981a6e7b8f18'               # Replace with your security group ID
+SUBNET_IDS = ['subnet-06bd72b2e4cb41d10', 'subnet-03ca36de9a927fe8e']  # Replace with your subnet IDs
+AMI_ID = 'ami-08d8ac128e0a1b91c'                         # Replace with the desired AMI ID
+INSTANCE_TYPE = 't2.micro'                               # Set your instance type
+
+def launch_ec2_instance(subnet_id, instance_name):
+    """Launch an EC2 instance in a specific subnet."""
+    try:
+        print(f"Launching EC2 instance in subnet '{subnet_id}'...")
+        
+        instance = ec2.create_instances(
+            ImageId=AMI_ID,
+            MinCount=1,
+            MaxCount=1,
+            InstanceType=INSTANCE_TYPE,
+            KeyName=KEY_PAIR,
+            SecurityGroupIds=[SECURITY_GROUP_ID],
+            SubnetId=subnet_id,
+            TagSpecifications=[{
+                'ResourceType': 'instance',
+                'Tags': [{'Key': 'Name', 'Value': instance_name}]
+            }],
+            UserData="""#!/bin/bash
+                        sudo yum update -y
+                        sudo yum install -y nginx
+                        sudo systemctl start nginx
+                        sudo systemctl enable nginx
+                        sudo rm -f /usr/share/nginx/html/index.html && wget -P /usr/share/nginx/html https://bharat-web-app.s3.us-west-2.amazonaws.com/index.html
+                        sudo systemctl restart nginx
+            """
+        )[0]
+        
+        # Wait until the instance is running
+        instance.wait_until_running()
+        instance.reload()  # Refresh instance attributes after running
+        
+        print(f"EC2 instance '{instance.id}' launched in subnet '{subnet_id}' with public IP {instance.public_ip_address}.")
+        return instance
+    
+    except ClientError as e:
+        error_code = e.response['Error']['Code']
+        print(f"Failed to launch EC2 instance in subnet '{subnet_id}': {error_code}")
+        if error_code == 'InvalidSubnetID.NotFound':
+            print(f"Invalid subnet ID: {subnet_id}")
+        elif error_code == 'InvalidKeyPair.NotFound':
+            print(f"Key pair '{KEY_PAIR}' not found.")
+        elif error_code == 'InvalidAMIID.NotFound':
+            print(f"AMI ID '{AMI_ID}' not found.")
+        else:
+            print(f"An unexpected error occurred: {e}")
+        return None
+
+def delete_ec2_instances(instance_ids):
+    """Delete specified EC2 instances."""
+    try:
+        if not instance_ids:
+            print("No instance IDs provided for deletion.")
+            return
+
+        print(f"Terminating EC2 instances: {', '.join(instance_ids)}")
+        
+        instances = ec2.instances.filter(InstanceIds=instance_ids)
+        
+        for instance in instances:
+            instance.terminate()
+            print(f"Termination initiated for instance {instance.id}")
+        
+        # Wait for all instances to be terminated
+        for instance in instances:
+            instance.wait_until_terminated()
+            print(f"Instance {instance.id} has been terminated.")
+    
+    except ClientError as e:
+        error_code = e.response['Error']['Code']
+        print(f"Failed to terminate EC2 instances: {error_code}")
+        if error_code == 'InvalidInstanceID.NotFound':
+            print("One or more instance IDs not found.")
+        else:
+            print(f"An unexpected error occurred: {e}")
+
+if __name__ == "__main__":
+    # Launch EC2 instances
+    print("Launching EC2 instances...")
+    instance_1 = launch_ec2_instance(SUBNET_IDS[0], 'WebServer1')
+    instance_2 = launch_ec2_instance(SUBNET_IDS[1], 'WebServer2')
+
+    if instance_1 and instance_2:
+        print("Both EC2 instances launched successfully.")
+
+        # Uncomment the lines below to wait and then terminate instances
+        # print("Waiting for a while before terminating instances...")
+        # time.sleep(300)  # 5 minutes wait (or set any duration you need)
+        
+        # print("Initiating instance termination...")
+        # delete_ec2_instances([instance_1.id, instance_2.id])
+        # print("EC2 instance termination completed.")
+    else:
+        print("Failed to launch one or both EC2 instances.")

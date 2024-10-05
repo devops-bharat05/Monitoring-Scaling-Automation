@@ -1,0 +1,33 @@
+import boto3
+import target_grp
+from botocore.exceptions import ClientError
+import config  # Import the configuration file
+
+# Initialize AWS clients
+ec2 = boto3.client('ec2', region_name=config.REGION_NAME)
+autoscaling_client = boto3.client('autoscaling')
+
+def create_launch_template():
+    """Creates a launch template for EC2 instances."""
+    try:
+        response = ec2.create_launch_template(
+            LaunchTemplateName=config.LAUNCH_TEMPLATE_NAME,
+            VersionDescription='Initial version',
+            LaunchTemplateData={
+                'ImageId': config.AMI_ID,
+                'InstanceType': config.INSTANCE_TYPE,
+                'KeyName': config.KEY_PAIR,
+                'SecurityGroupIds': [config.SECURITY_GROUP_ID],
+                'TagSpecifications': [
+                    {
+                        'ResourceType': 'instance',
+                        'Tags': [{'Key': 'Name', 'Value': 'AutoScalingInstance'}]
+                    }
+                ],
+            }
+        )
+        print(f"Launch template created: {response['LaunchTemplate']['LaunchTemplateId']}")
+        return response['LaunchTemplate']['LaunchTemplateId']
+    except ClientError as e:
+        print(f"Error creating launch template: {e}")
+        return None

@@ -1,0 +1,72 @@
+import boto3
+import target_grp
+from botocore.exceptions import ClientError
+import ec2instance
+
+# Initialize ELB client
+elb_client = boto3.client('elbv2', region_name='us-west-2')
+
+# Global Variables
+SECURITY_GROUP_ID = 'sg-09390981a6e7b8f18'
+SUBNET_IDS = ['subnet-06bd72b2e4cb41d10', 'subnet-03ca36de9a927fe8e']
+TARGET_GP_NAME = 'bharat-tg'
+
+# Ensure target group creation returns a valid ARN
+TARGET_GROUP_ARN = target_grp.create_trg_gp()
+
+def create_load_balancer(target_group_arn=None):
+    """Create an Application Load Balancer and attach a listener."""
+    print("Creating Application Load Balancer...")
+    
+    try:
+        # Create the load balancer
+        load_balancer = elb_client.create_load_balancer(
+            Name='bharat-load-balancer',
+            Subnets=SUBNET_IDS,
+            SecurityGroups=[SECURITY_GROUP_ID],
+            Scheme='internet-facing',
+            Type='application',
+            IpAddressType='ipv4'
+        )['LoadBalancers'][0]
+
+        print(f"Application Load Balancer '{load_balancer['LoadBalancerArn']}' created.")
+
+        # Create listener if Target Group ARN is provided
+        if target_group_arn:
+            listener_response = elb_client.create_listener(
+                LoadBalancerArn=load_balancer['LoadBalancerArn'],
+                Protocol='HTTP',
+                Port=80,
+                DefaultActions=[{
+                    'Type': 'forward',
+                    'TargetGroupArn': target_group_arn
+                }]
+            )
+            print(f"Listener created for Target Group '{target_group_arn}'.")
+
+        return load_balancer
+
+    except ClientError as e:
+        if e.response['Error']['Code'] == 'DuplicateLoadBalancerName':
+            print("Load Balancer with the specified name already exists.")
+        else:
+            print(f"An error occurred: {e}")
+
+def delete_load_balancer(load_balancer_arn):
+    """Delete the Application Load Balancer."""
+    print("Deleting Application Load Balancer...")
+    
+    try:
+        elb_client.delete_load_balancer(LoadBalancerArn=load_balancer_arn)
+        print(f"Load Balancer '{load_balancer_arn}' deleted.")
+    except ClientError as e:
+        print(f"An error occurred while deleting the Load Balancer: {e}")
+
+# Ensure ec2instance module has launch_ec2_instance method
+ec2instance.launch_ec2_instance()
+
+# Create load balancer with a valid Target Group ARN
+load_balancer = create_load_balancer(TARGET_GROUP_ARN)
+
+# Uncomment the following line to delete the load balancer
+# delete_load_balancer(load_balancer['LoadBalancerArn'])

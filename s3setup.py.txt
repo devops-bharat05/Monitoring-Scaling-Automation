@@ -1,0 +1,91 @@
+import boto3
+import json
+from botocore.exceptions import ClientError
+
+S3_BUCKET_NAME = 'bharat-web-app'
+s3 = boto3.client('s3', region_name='us-west-2')
+
+def create_s3_bucket():
+    """Create an S3 bucket to store web application static files."""
+    try:
+        # Check if the bucket already exists
+        response = s3.list_buckets()
+        buckets = [bucket['Name'] for bucket in response['Buckets']]
+        
+        if S3_BUCKET_NAME in buckets:
+            print(f"S3 bucket '{S3_BUCKET_NAME}' already exists. Skipping creation.")
+        else:
+            # Create the S3 bucket
+            print("Creating S3 bucket...")
+            s3.create_bucket(
+                Bucket=S3_BUCKET_NAME,
+                CreateBucketConfiguration={'LocationConstraint': 'us-west-2'},
+            )
+            
+            # Setting Block public access to Off
+            s3.put_public_access_block(
+                Bucket=S3_BUCKET_NAME,
+                PublicAccessBlockConfiguration={
+                    'BlockPublicAcls': False,
+                    'IgnorePublicAcls': False,
+                    'BlockPublicPolicy': False,
+                    'RestrictPublicBuckets': False
+                }
+            )
+            
+            # Add bucket policy to allow public read
+            bucket_policy = {
+                "Version": "2012-10-17",
+                "Statement": [
+                    {
+                        "Effect": "Allow",
+                        "Principal": "*",
+                        "Action": "s3:GetObject",
+                        "Resource": f"arn:aws:s3:::{S3_BUCKET_NAME}/*"
+                    }
+                ]
+            }
+            bucket_policy = json.dumps(bucket_policy)
+            
+            s3.put_bucket_policy(Bucket=S3_BUCKET_NAME, Policy=bucket_policy)
+            print(f"S3 bucket '{S3_BUCKET_NAME}' created successfully.")
+    except ClientError as e:
+        # Catching all specific S3-related errors
+        error_code = e.response['Error']['Code']
+        if error_code == 'BucketAlreadyExists':
+            print(f"Bucket '{S3_BUCKET_NAME}' already exists globally.")
+        elif error_code == 'BucketAlreadyOwnedByYou':
+            print(f"Bucket '{S3_BUCKET_NAME}' is already owned by you.")
+        else:
+            print(f"An unexpected error occurred: {e}")
+
+def delete_s3_bucket():
+    """Delete the S3 bucket used for storing web application static files."""
+    try:
+        # Check if the bucket exists
+        response = s3.list_buckets()
+        buckets = [bucket['Name'] for bucket in response['Buckets']]
+        
+        if S3_BUCKET_NAME not in buckets:
+            print(f"S3 bucket '{S3_BUCKET_NAME}' does not exist. Nothing to delete.")
+            return
+
+        # List and delete all objects in the bucket
+        print(f"Deleting all objects in S3 bucket '{S3_BUCKET_NAME}'...")
+        bucket = boto3.resource('s3').Bucket(S3_BUCKET_NAME)
+        bucket.objects.all().delete()
+
+        # Delete the bucket
+        print(f"Deleting S3 bucket '{S3_BUCKET_NAME}'...")
+        s3.delete_bucket(Bucket=S3_BUCKET_NAME)
+        print(f"S3 bucket '{S3_BUCKET_NAME}' has been deleted.")
+    except ClientError as e:
+        error_code = e.response['Error']['Code']
+        if error_code == 'NoSuchBucket':
+            print(f"S3 bucket '{S3_BUCKET_NAME}' does not exist.")
+        else:
+            print(f"An error occurred: {e}")
+
+# Uncomment the function you want to run
+create_s3_bucket()
+# delete_s3_bucket()

@@ -1,0 +1,34 @@
+import boto3
+import launchtemplate
+import loadbalancer
+import target_grp
+import ec2instance
+import config  # Import the configuration file
+import s3setup
+
+
+def main():
+    # Step 1: Delete the s3 bucket
+    print("Deleting the s3 bucket...")
+    s3setup.delete_s3_bucket()  # Delete the s3 bucket
+
+    # Step 2: Delete Auto Scaling Group
+    print("Deleting Auto Scaling Group...")
+    launchtemplate.delete_auto_scaling_group()  # Delete the auto-scaling group
+
+    # Step 3: Delete Load Balancer
+    print("Deleting Load Balancer...")
+    loadbalancer.delete_load_balancer()  # Delete the load balancer
+
+    # Step 4: Delete Target Group
+    print("Deleting Target Group...")
+    target_grp.delete_target_group()  # Delete the target group (implement this function in target_grp.py)
+
+    # Step 5: Terminate EC2 instances
+    print("Terminating EC2 instances...")
+    ec2instance.delete_ec2_instances()  # Implement this function to delete instances by IDs
+
+    print("All resources deleted successfully.")
+
+if __name__ == "__main__":
+    main()

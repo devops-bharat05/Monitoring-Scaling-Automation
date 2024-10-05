@@ -1,0 +1,39 @@
+import boto3
+import launchtemplate
+import loadbalancer
+import ec2instance
+import sns_notification
+import config  # Import the configuration file
+import s3setup
+
+def main():
+    # Step 1: creating S3 bucket
+    print("Creating S3 bucket...")
+    s3setup.create_s3_bucket()  # creating S3 bucket
+
+    # Step 2: Launch EC2 instances
+    print("Launching EC2 instances...")
+    ec2instance.launch_ec2_instance()  # Launch EC2 instances
+
+    # Step 3: Create Target Group
+    print("Creating Target Group...")
+    target_group_arn = target_grp.create_trg_gp()  # Create the target group
+
+    # Step 4: Create Load Balancer
+    print("Creating Load Balancer...")
+    load_balancer = loadbalancer.create_load_balancer(target_group_arn)  # Create the load balancer
+
+    # Step 5: Create Launch Template and Auto Scaling Group
+    print("Creating Launch Template and Auto Scaling Group...")
+    launch_template_id = launchtemplate.create_launch_template()  # Create launch template
+    if launch_template_id:
+        launchtemplate.create_auto_scaling_group(launch_template_id)  # Create auto-scaling group
+
+    # Step 6: Create SNS Topics and CloudWatch Alarms
+    print("Setting up SNS notifications and CloudWatch alarms...")
+    sns_notification.main()  # Set up SNS and CloudWatch
+
+    print("All resources created successfully.")
+
+if __name__ == "__main__":
+    main()
