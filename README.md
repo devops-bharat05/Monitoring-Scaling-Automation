@@ -1,47 +1,136 @@
-# Monitoring-Scaling-Automation
-## Overview
-Develop a system that automatically manages the lifecycle of a web application hosted on EC2 instances, monitors its health, and reacts to changes in traffic by scaling resources. Furthermore, administrators receive notifications regarding the infrastructure's health and scaling events.
+Here's the updated `README.md` file for your GitHub repository, providing a clear explanation of the project, setup instructions, and code structure:
 
-## Detailed Breakdown:
+### `README.md`
 
-### 1. Web Application Deployment:
+```markdown
+# AWS Resource Management Script
 
-- Use `boto3` to:
-  - Create an S3 bucket to store your web application's static files.
-  - Launch an EC2 instance and configure it as a web server (e.g., Apache, Nginx).
-  - Deploy the web application onto the EC2 instance.
+This project contains Python scripts to automate the creation and deletion of AWS resources such as EC2 instances, load balancers, target groups, launch templates, and SNS notifications. The scripts utilize the `boto3` library to interact with AWS services, streamlining infrastructure management.
 
-### 2. Load Balancing with ELB:
+## Table of Contents
 
-- Deploy an Application Load Balancer (ALB) using `boto3`.
-- Register the EC2 instance(s) with the ALB.
+- [Prerequisites](#prerequisites)
+- [Installation](#installation)
+- [Project Structure](#project-structure)
+- [Usage](#usage)
+  - [Creating Resources](#creating-resources)
+  - [Deleting Resources](#deleting-resources)
+- [Configuration](#configuration)
+- [Code Explanation](#code-explanation)
+- [License](#license)
 
-### 3. Auto Scaling Group (ASG) Configuration:
+## Prerequisites
 
-- Using `boto3`, create an ASG with the deployed EC2 instance as a template.
-- Configure scaling policies to scale in/out based on metrics like CPU utilization or network traffic.
+- An AWS account
+- Python 3.6 or later
+- AWS CLI configured with appropriate permissions
+- Required Python packages
 
-### 4. SNS Notifications:
+## Installation
 
-- Set up different SNS topics for different alerts (e.g., health issues, scaling events, high traffic).
-- Integrate SNS with Lambda so that administrators receive SMS or email notifications.
+1. **Clone the repository:**
 
-### 5. Infrastructure Automation:
+   ```bash
+   git clone https://github.com/devops-bharat05/Monitoring-Scaling-Automation01
+   cd aws-resource-management
+   ```
 
-- Create a single script using `boto3` that:
-  - Deploys the entire infrastructure.
-  - Updates any component as required.
-  - Tears down everything when the application is no longer needed.
+2. **Install required packages:**
 
-### 6. Optional Enhancement – Dynamic Content Handling:
+   Use `pip` to install the required Python packages. You can create a `requirements.txt` file with the following content:
 
-- Store user-generated content or uploads on S3.
-- When a user uploads content to the web application, it gets temporarily stored on the EC2 instance. A background process (or another Lambda function) can move this to the S3 bucket and update the application's database to point to the content's new location on S3.
+   ```plaintext
+   boto3
+   ```
 
-## Objectives:
+   Then, run:
 
-- Gain a comprehensive understanding of key AWS services and their integration.
-- Understand the lifecycle of a dynamic web application and its infrastructure.
-- Learn how to automate infrastructure deployment and management tasks using boto3.
-- Experience with real-time monitoring and alerting systems.
+   ```bash
+   pip install -r requirements.txt
+   ```
 
+3. **Set up AWS credentials:**
+
+   Ensure you have your AWS credentials set up. You can do this by configuring the AWS CLI:
+
+   ```bash
+   aws configure
+   ```
+
+   Enter your `AWS Access Key`, `AWS Secret Key`, `region`, and `output format`.
+
+## Project Structure
+
+```
+aws-resource-management/
+├── config.py                # Configuration file for AWS resources
+├── create_resources.py       # Script to create AWS resources
+├── delete_resources.py       # Script to delete AWS resources
+├── ec2instance.py           # Functions for EC2 instance management
+├── filterEc2Tags.py         # Functions to filter EC2 instances by tags
+├── launchtemplate.py         # Functions for creating and managing launch templates
+├── loadbalancer.py           # Functions for creating and managing load balancers
+├── sns_notification.py       # Functions for managing SNS notifications
+├── target_grp.py             # Functions for creating and managing target groups
+└── requirements.txt          # Required Python packages
+```
+
+## Usage
+
+### Creating Resources
+
+To create all the necessary AWS resources, run the `create_resources.py` script:
+
+```bash
+python create_resources.py
+```
+
+### Deleting Resources
+
+To delete all the created AWS resources, run the `delete_resources.py` script:
+
+```bash
+python delete_resources.py
+```
+
+## Configuration
+
+All configurable variables are located in `config.py`. You can modify these variables according to your requirements:
+
+- `REGION_NAME`: AWS region where resources will be created.
+- `KEY_PAIR`: Name of the key pair for EC2 instances.
+- `SECURITY_GROUP_ID`: Security Group ID to associate with the EC2 instances.
+- `SUBNET_IDS`: List of subnet IDs where the resources will be deployed.
+- `AMI_ID`: Amazon Machine Image ID to use for the EC2 instances.
+- `INSTANCE_TYPE`: Type of the EC2 instances to be created.
+- `LAUNCH_TEMPLATE_NAME`: Name of the launch template.
+- `AUTO_SCALING_GROUP_NAME`: Name of the auto-scaling group.
+- `TARGET_GROUP_NAME`: Name of the target group for the load balancer.
+- `INSTANCE_NAMES`: List of instance names for SNS notifications.
+
+## Code Explanation
+
+1. **`create_resources.py`**: This script orchestrates the creation of AWS resources in the following order:
+   - Launch EC2 instances.
+   - Create a target group for the load balancer.
+   - Create a load balancer and attach listeners.
+   - Create a launch template and an auto-scaling group.
+   - Set up SNS notifications and CloudWatch alarms for monitoring.
+
+2. **`delete_resources.py`**: This script handles the deletion of AWS resources in reverse order to avoid dependency issues:
+   - Delete the auto-scaling group.
+   - Delete the load balancer.
+   - Delete the target group.
+   - Terminate EC2 instances.
+
+3. **Other Modules**:
+   - **`ec2instance.py`**: Contains functions for managing EC2 instances, including launching and deleting instances.
+   - **`filterEc2Tags.py`**: Provides utility functions to filter EC2 instances based on their tags.
+   - **`launchtemplate.py`**: Manages the creation and deletion of launch templates.
+   - **`loadbalancer.py`**: Contains functions for creating and managing load balancers.
+   - **`sns_notification.py`**: Manages the creation of SNS topics and subscriptions, as well as setting up CloudWatch alarms.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+```
