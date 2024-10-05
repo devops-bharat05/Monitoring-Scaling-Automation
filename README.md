@@ -128,4 +128,3 @@ All configurable variables are located in `config.py`. You can modify these vari
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-```
